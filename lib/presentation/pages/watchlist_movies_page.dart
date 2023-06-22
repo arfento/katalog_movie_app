@@ -1,0 +1,92 @@
+import 'package:eva_icons_flutter/eva_icons_flutter.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:katalog_movie_app/presentation/bloc/movies/watchlist_movie_bloc/watchlist_movie_bloc.dart';
+import 'package:katalog_movie_app/presentation/widgets/movie_card_list.dart';
+import 'package:katalog_movie_app/utils/constants.dart';
+import 'package:katalog_movie_app/utils/router.dart';
+
+class WatchlistMoviesPage extends StatefulWidget {
+  static const ROUTE_NAME = '/watchlist-movie';
+
+  const WatchlistMoviesPage({Key? key}) : super(key: key);
+
+  @override
+  State<WatchlistMoviesPage> createState() => _WatchlistMoviesPageState();
+}
+
+class _WatchlistMoviesPageState extends State<WatchlistMoviesPage>
+    with RouteAware {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() =>
+        BlocProvider.of<WatchlistMovieBloc>(context, listen: false)
+            .add(FetchWatchlistMovie()));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void didPopNext() {
+    BlocProvider.of<WatchlistMovieBloc>(context, listen: false)
+        .add(FetchWatchlistMovie());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: BlocBuilder<WatchlistMovieBloc, WatchlistMovieState>(
+        builder: (context, state) {
+          if (state is WatchlistMovieLoading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else if (state is WatchlistMovieHasData) {
+            return ListView.builder(
+              padding: const EdgeInsets.only(top: 8),
+              itemBuilder: (context, index) {
+                final movie = state.listMovie[index];
+                return MovieCard(movie);
+              },
+              itemCount: state.listMovie.length,
+            );
+          } else if (state is WatchlistMovieEmpty) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Icon(
+                  EvaIcons.videoOff,
+                  size: 150,
+                ),
+                Text(
+                  "Your movie watchlist is empty",
+                  style: kSmallTitle,
+                )
+              ],
+            );
+          } else if (state is WatchlistMovieError) {
+            return Center(
+              key: const Key('error_message'), // key to test app
+              child: Text(state.message),
+            );
+          } else {
+            return const Center();
+          }
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+}
